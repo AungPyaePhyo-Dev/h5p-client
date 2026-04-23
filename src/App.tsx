@@ -29,8 +29,9 @@ export default function App() {
   }, []);
 
   const saveEditorContent = useCallback(
-    async (contentId: string, body: { library: string; params: any }) => {
-      const res = await fetch(`/h5p/content/${contentId}`, {
+    async (contentId: string | undefined, body: { library: string; params: any }) => {
+      const url = contentId ? `/h5p/content/${contentId}` : '/h5p/content';
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
