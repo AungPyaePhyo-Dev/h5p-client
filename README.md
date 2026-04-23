@@ -1,37 +1,60 @@
 # h5p-client
 
-React + Vite frontend for the H5P Mini app. Hosts `<H5PEditorUI>` and
-`<H5PPlayerUI>` and talks to the [h5p-server](../h5p-server) NestJS backend.
+React + Vite + TypeScript frontend for the H5P Mini app. Renders
+`<H5PEditorUI>` and `<H5PPlayerUI>` from [`@lumieducation/h5p-react`](https://www.npmjs.com/package/@lumieducation/h5p-react)
+and talks to an H5P backend over HTTP at `/h5p/*`.
+
+## Requirements
+
+- Node.js 18+
+- A running H5P backend on `http://localhost:3000` that serves the `/h5p/*`
+  endpoints used below (see [Backend contract](#backend-contract)).
 
 ## Run
 
-Both projects must be running.
-
-### 1) Backend (one-time setup + start)
-
-```bash
-cd ../h5p-server
-npm install
-npm run h5p:fetch       # downloads H5P core + editor static assets (~30MB). Run once.
-npm run prisma:generate
-npm run prisma:migrate  # requires a running Postgres (see .env)
-npm run start:dev       # listens on :3000
-```
-
-### 2) Frontend
-
 ```bash
 npm install
-npm run dev             # listens on :5173, proxies /h5p/* to :3000
+npm run dev       # http://localhost:5173
 ```
 
-Open http://localhost:5173.
+The Vite dev server proxies `/h5p/*` to `http://localhost:3000`
+(see [vite.config.ts](vite.config.ts)).
 
-## Creating H5P content
+## Scripts
+
+| Script            | What it does                              |
+| ----------------- | ----------------------------------------- |
+| `npm run dev`     | Start Vite dev server on :5173            |
+| `npm run build`   | Type-check (`tsc`) then produce `dist/`   |
+| `npm run preview` | Serve the built `dist/` locally           |
+
+## Project layout
+
+- [index.html](index.html) — Vite entry
+- [src/main.tsx](src/main.tsx) — React root
+- [src/App.tsx](src/App.tsx) — list / edit / play views and backend calls
+- [vite.config.ts](vite.config.ts) — dev server + `/h5p` proxy
+
+## Using the app
 
 1. Click **+ Create new content**.
-2. Use the H5P Hub picker inside the editor to choose a content type
-   (e.g. H5P.MultiChoice). The backend installs it from the H5P Hub on first use.
-3. Fill in the fields, click **Save**.
-4. The saved content appears in the list with **Play**, **Edit**, and
-   **Download .h5p** buttons.
+2. Pick a content type in the H5P Hub picker (e.g. `H5P.MultiChoice`).
+   The backend installs it on first use.
+3. Fill in the fields and click **Save**.
+4. The saved item appears in the list with **Play**, **Edit**, and
+   **Download .h5p** actions.
+
+## Backend contract
+
+The frontend expects these endpoints (all relative to the proxy target):
+
+| Method | Path                         | Used for                                   |
+| ------ | ---------------------------- | ------------------------------------------ |
+| GET    | `/h5p/content`               | List saved content                         |
+| GET    | `/h5p/editor-model/:id`      | Load editor model (use `new` for create)   |
+| POST   | `/h5p/content` / `:id`       | Create or update content                   |
+| GET    | `/h5p/player-model/:id`      | Load player model                          |
+| GET    | `/h5p/download/:id`          | Download `.h5p` package                    |
+
+To point at a different backend, change the `proxy` target in
+[vite.config.ts](vite.config.ts).
