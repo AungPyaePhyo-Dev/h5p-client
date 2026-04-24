@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { H5PEditorUI, H5PPlayerUI } from '@lumieducation/h5p-react';
+import ScormQuiz from './ScormQuiz';
+import ScormLesson from './ScormLesson';
 
 type ContentRecord = { id: string; title: string; mainLibrary: string };
-type View = { kind: 'list' } | { kind: 'edit'; contentId: string } | { kind: 'play'; contentId: string };
+type View =
+  | { kind: 'list' }
+  | { kind: 'edit'; contentId: string }
+  | { kind: 'play'; contentId: string }
+  | { kind: 'scorm' };
 
 export default function App() {
   const [content, setContent] = useState<ContentRecord[]>([]);
@@ -21,7 +27,6 @@ export default function App() {
     refreshContent();
   }, [refreshContent]);
 
-  // <H5PEditorUI> callbacks — talk directly to the Nest backend.
   const loadEditorContent = useCallback(async (contentId: string) => {
     const res = await fetch(`/h5p/editor-model/${contentId}`);
     if (!res.ok) throw new Error(`editor-model failed: ${res.status}`);
@@ -48,6 +53,14 @@ export default function App() {
     return res.json();
   }, []);
 
+  if (view.kind === 'scorm') {
+    return (
+      <div style={{ fontFamily: 'system-ui, sans-serif', padding: 24, maxWidth: 1100 }}>
+        <ScormShell onBack={() => setView({ kind: 'list' })} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', padding: 24, maxWidth: 1100 }}>
       <header style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -58,9 +71,14 @@ export default function App() {
           </button>
         )}
         {view.kind === 'list' && (
-          <button onClick={() => setView({ kind: 'edit', contentId: 'new' })}>
-            + Create new content
-          </button>
+          <>
+            <button onClick={() => setView({ kind: 'scorm' })}>
+              Custom SCORM
+            </button>
+            <button onClick={() => setView({ kind: 'edit', contentId: 'new' })}>
+              + Create new content
+            </button>
+          </>
         )}
       </header>
 
@@ -129,3 +147,51 @@ export default function App() {
     </div>
   );
 }
+
+function ScormShell({ onBack }: { onBack: () => void }) {
+  const [tab, setTab] = useState<'quizzes' | 'lessons'>('lessons');
+  return (
+    <div>
+      <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <h2 style={{ margin: 0, marginRight: 'auto' }}>Custom SCORM</h2>
+        <button onClick={onBack}>← Back to H5P</button>
+      </header>
+      <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #ddd', marginBottom: 16 }}>
+        <TabButton active={tab === 'lessons'} onClick={() => setTab('lessons')}>Lessons</TabButton>
+        <TabButton active={tab === 'quizzes'} onClick={() => setTab('quizzes')}>Quizzes</TabButton>
+      </div>
+      {tab === 'lessons' ? <ScormLesson /> : <ScormQuiz />}
+    </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '8px 14px',
+        border: 'none',
+        borderBottom: active ? '2px solid #333' : '2px solid transparent',
+        background: 'transparent',
+        cursor: 'pointer',
+        fontWeight: active ? 600 : 400,
+        fontSize: 14,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+const styleEl = document.createElement('style');
+styleEl.textContent = '@keyframes h5p-spin { to { transform: rotate(360deg); } }';
+document.head.appendChild(styleEl);
